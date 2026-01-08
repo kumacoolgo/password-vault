@@ -4,7 +4,7 @@ export type VaultItem = {
   url: string;
   username?: string;
   password: string;
-  createdAt?: string;
-  validDays?: number;
-  dueDate?: string;
+  createdAt?: string; // ISO
+  validDays?: number; // days
+  dueDate?: string;   // ISO
 };
