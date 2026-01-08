@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { cookies } from "next/headers";
+import { mustEnv } from "@/lib/env";
 
 const COOKIE_NAME = "pv_session";
 
@@ -8,33 +9,38 @@ function hmac(data: string, secret: string) {
 }
 
 export function signSession(payload: object) {
-  const secret = process.env.AUTH_SECRET!;
+  const secret = mustEnv("AUTH_SECRET");
   const json = JSON.stringify(payload);
   const b64 = Buffer.from(json).toString("base64url");
   const sig = hmac(b64, secret);
   return `${b64}.${sig}`;
 }
 
-export function verifySession(token: string | undefined) {
+export function verifySession(token: string | undefined | null) {
   if (!token) return null;
-  const secret = process.env.AUTH_SECRET!;
+  const secret = mustEnv("AUTH_SECRET");
+
   const [b64, sig] = token.split(".");
   if (!b64 || !sig) return null;
 
   const expected = hmac(b64, secret);
-  // both are hex strings of same length
-  try {
-    if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
-  } catch {
-    return null;
-  }
+  // timing safe compare
+  const a = Buffer.from(sig);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return null;
+  if (!crypto.timingSafeEqual(a, b)) return null;
 
   try {
     const json = Buffer.from(b64, "base64url").toString("utf8");
-    return JSON.parse(json) as { user: string; iat: number };
+    return JSON.parse(json) as { user?: string; iat?: number };
   } catch {
     return null;
   }
+}
+
+export function getSession() {
+  const token = cookies().get(COOKIE_NAME)?.value;
+  return verifySession(token);
 }
 
 export function setSessionCookie(user: string) {
