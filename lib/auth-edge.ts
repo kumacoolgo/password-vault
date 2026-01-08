@@ -34,7 +34,9 @@ export async function verifySessionEdge(token: string | undefined, secret: strin
   if (!timingSafeEqual(sig, expected)) return null;
 
   try {
-    const json = new TextDecoder().decode(Uint8Array.from(atob(b64.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0)));
+    const json = new TextDecoder().decode(
+      Uint8Array.from(atob(b64.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0))
+    );
     return JSON.parse(json) as { user: string; iat: number };
   } catch {
     return null;
