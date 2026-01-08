@@ -18,7 +18,12 @@ export function signSession(payload: object) {
 
 export function setSessionCookie(user: string) {
   const token = signSession({ user, iat: Date.now() });
-  cookies().set(COOKIE_NAME, token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/" });
+  cookies().set(COOKIE_NAME, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+  });
 }
 
 export function clearSessionCookie() {

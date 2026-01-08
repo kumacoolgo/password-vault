@@ -5,7 +5,12 @@ import { verifySessionEdge } from "./lib/auth-edge";
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  if (pathname.startsWith("/_next") || pathname.startsWith("/favicon.ico") || pathname.startsWith("/login") || pathname.startsWith("/api/login")) {
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon.ico") ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/api/login")
+  ) {
     return NextResponse.next();
   }
 

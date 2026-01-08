@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { redis } from "@/lib/redis";
 import type { VaultItem } from "@/lib/types";
 import { nanoid } from "nanoid";
-import { decrypt, encrypt } from "@/lib/crypto";
+import { decryptSafe, encrypt, isEncrypted } from "@/lib/crypto";
 import { ratelimit } from "@/lib/ratelimit";
 
 const INDEX_KEY = "vault:items";
@@ -18,16 +18,17 @@ export async function GET(req: Request) {
   const limit = limitRaw > 0 ? Math.min(limitRaw, 500) : 0;
   const stop = limit > 0 ? offset + limit - 1 : -1;
 
-  const ids = (await redis.lrange<string[]>(INDEX_KEY, offset, stop)) ?? [];
+  const ids = (await redis.lrange<string>(INDEX_KEY, offset, stop)) ?? [];
   if (!ids.length) return NextResponse.json({ items: [], offset, limit });
 
   const keys = ids.map((id) => `vault:item:${id}`);
-  const items = (await redis.mget<VaultItem[]>(...keys)) ?? [];
+  const rows = (await redis.mget<VaultItem>(...keys)) ?? [];
 
   const out: VaultItem[] = [];
-  for (const it of items.filter(Boolean) as VaultItem[]) {
-    out.push({ ...it, password: decrypt(it.password ?? "") });
+  for (const it of rows.filter(Boolean) as VaultItem[]) {
+    out.push({ ...it, password: decryptSafe(it.password ?? "") });
   }
+
   out.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
   return NextResponse.json({ items: out, offset, limit });
 }
@@ -39,6 +40,9 @@ export async function POST(req: Request) {
 
   const body = (await req.json()) as Partial<VaultItem>;
   if (!body.url) return NextResponse.json({ error: "url required" }, { status: 400 });
+  if (typeof body.password === "string" && isEncrypted(body.password)) {
+    return NextResponse.json({ error: "password must be plaintext" }, { status: 400 });
+  }
 
   const id = nanoid();
   const item: VaultItem = {

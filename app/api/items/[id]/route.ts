@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { redis } from "@/lib/redis";
 import type { VaultItem } from "@/lib/types";
-import { decrypt, encrypt } from "@/lib/crypto";
+import { decryptSafe, encrypt, isEncrypted } from "@/lib/crypto";
 import { ratelimit } from "@/lib/ratelimit";
 
 const INDEX_KEY = "vault:items";
@@ -14,11 +14,16 @@ export async function PUT(req: Request, ctx: { params: { id: string } }) {
   const id = ctx.params.id;
   const patch = (await req.json()) as Partial<VaultItem> & { clearPassword?: boolean };
 
+  // Defensive: reject if client accidentally sends encrypted payload
+  if (typeof patch.password === "string" && isEncrypted(patch.password)) {
+    return NextResponse.json({ error: "password must be plaintext" }, { status: 400 });
+  }
+
   const key = `vault:item:${id}`;
   const currentEnc = await redis.get<VaultItem>(key);
   if (!currentEnc) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const current: VaultItem = { ...currentEnc, password: decrypt(currentEnc.password ?? "") };
+  const current: VaultItem = { ...currentEnc, password: decryptSafe(currentEnc.password ?? "") };
 
   const nextPassword =
     patch.clearPassword === true

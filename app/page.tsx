@@ -35,6 +35,21 @@ export default function HomePage() {
 
   const selected = useMemo(() => items.find((x) => x.id === selectedId) ?? null, [items, selectedId]);
 
+  const isDirty = useMemo(() => {
+    if (!selected) return false;
+    const norm = (v: any) => (v === undefined || v === null ? "" : String(v));
+    // Compare all editable fields (treat undefined and "" as equal)
+    return (
+      norm(draft.category) !== norm(selected.category) ||
+      norm(draft.url) !== norm(selected.url) ||
+      norm(draft.username) !== norm(selected.username) ||
+      norm(draft.password) !== norm(selected.password) ||
+      norm(draft.createdAt) !== norm(selected.createdAt) ||
+      norm(draft.validDays) !== norm(selected.validDays) ||
+      norm(draft.dueDate) !== norm(selected.dueDate)
+    );
+  }, [draft, selected]);
+
   const filteredItems = useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return items;
@@ -80,6 +95,10 @@ export default function HomePage() {
 
   async function save() {
     if (!selected) return;
+    if (!isDirty) {
+      setToast("没有变化，无需保存");
+      return;
+    }
     const res = await fetch(`/api/items/${selected.id}`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
@@ -110,7 +129,7 @@ export default function HomePage() {
         <h2 className="font-semibold">编辑</h2>
         <div className="flex gap-2">
           <button type="button" className="rounded-xl border px-3 py-2 disabled:opacity-50" onClick={remove} disabled={!selected}>删除</button>
-          <button type="button" className="rounded-xl bg-black text-white px-3 py-2 disabled:opacity-50" onClick={save} disabled={!selected}>保存</button>
+          <button type="button" className="rounded-xl bg-black text-white px-3 py-2 disabled:opacity-50" onClick={save} disabled={!selected || !isDirty}>保存</button>
         </div>
       </div>
 
