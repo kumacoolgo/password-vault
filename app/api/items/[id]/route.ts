@@ -14,7 +14,7 @@ export async function PUT(req: Request, ctx: { params: { id: string } }) {
   const id = ctx.params.id;
   const patch = (await req.json()) as Partial<VaultItem> & { clearPassword?: boolean };
 
-  // Defensive: reject if client accidentally sends encrypted payload
+  // reject encrypted from client
   if (typeof patch.password === "string" && isEncrypted(patch.password)) {
     return NextResponse.json({ error: "password must be plaintext" }, { status: 400 });
   }

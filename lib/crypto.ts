@@ -50,18 +50,36 @@ export function encrypt(plaintext: string): string {
 
 function decryptOnce(payload: string): string {
   if (!payload) return "";
+
+  // 不是加密格式就当明文
   if (!isEncryptedPayload(payload)) return payload;
 
-  const parts = payload.split(":");
-  if (parts.length !== 4) throw new Error("Invalid encrypted payload format");
-  const [, ivB64, tagB64, ctB64] = parts;
-  const key = getKey();
+  // 只切前三个冒号：enc:v1:<iv>:<tag>:<ct...>
+  const p2 = payload.indexOf(":", 0);
+  const p3 = payload.indexOf(":", p2 + 1);
+  const p4 = payload.indexOf(":", p3 + 1);
+  const p5 = payload.indexOf(":", p4 + 1);
 
+  // 任意一个不存在都认为格式不对（兼容旧/脏数据：直接返回原文）
+  if (p2 < 0 || p3 < 0 || p4 < 0 || p5 < 0) return payload;
+
+  const prefix = payload.slice(0, p3); // "enc:v1"
+  if (prefix !== PREFIX) return payload;
+
+  const ivB64 = payload.slice(p3 + 1, p4);
+  const tagB64 = payload.slice(p4 + 1, p5);
+  const ctB64 = payload.slice(p5 + 1);
+
+  // 任何一段为空都视为脏数据，直接返回原文
+  if (!ivB64 || !tagB64 || !ctB64) return payload;
+
+  const key = getKey();
   const decipher = crypto.createDecipheriv("aes-256-gcm", key, Buffer.from(ivB64, "base64"));
   decipher.setAuthTag(Buffer.from(tagB64, "base64"));
   const plaintext = Buffer.concat([decipher.update(Buffer.from(ctB64, "base64")), decipher.final()]);
   return plaintext.toString("utf8");
 }
+
 
 /**
  * Decrypt repeatedly in case older code accidentally double-encrypted.
@@ -79,10 +97,14 @@ export function decrypt(payload: string): string {
 export function decryptSafe(payload: string): string {
   try {
     return decrypt(payload);
-  } catch {
+  } catch (e) {
+    console.error("[decryptSafe] failed:", e);
+    console.error("[decryptSafe] payload:", payload);
+    console.error("[ENCRYPTION_KEY length]", (process.env.ENCRYPTION_KEY ?? "").length);
     return "";
   }
 }
+
 
 export function isEncrypted(password: string) {
   return isEncryptedPayload(password);
