@@ -23,16 +23,14 @@ export async function GET(req: Request) {
   if (!ids.length) return NextResponse.json({ items: [], offset, limit });
 
   const keys = ids.map((id) => `vault:item:${id}`);
-
-  // We store as JSON string, so read as string
-  const rows = (await redis.mget<string>(...keys)) ?? [];
-
+  const rows = (await redis.mget(...keys)) ?? [];
+  
   const out: VaultItem[] = [];
   for (const raw of rows.filter(Boolean)) {
-    const it = parseMaybeJSON<VaultItem>(raw);
-    if (!it) continue;
+    const it = parseMaybeJSON<VaultItem>(raw) ?? (raw as VaultItem);
     out.push({ ...it, password: decryptSafe(it.password ?? "") });
   }
+
 
   out.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
   return NextResponse.json({ items: out, offset, limit });

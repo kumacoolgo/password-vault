@@ -21,8 +21,10 @@ export async function PUT(req: Request, ctx: { params: { id: string } }) {
   }
 
   const key = `vault:item:${id}`;
-  const currentRaw = await redis.get<string>(key);
-  const currentEnc = parseMaybeJSON<VaultItem>(currentRaw);
+  const currentRaw = await redis.get(key);
+
+  const currentEnc = parseMaybeJSON<VaultItem>(currentRaw) ?? (currentRaw as VaultItem);
+
   if (!currentEnc) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const current: VaultItem = { ...currentEnc, password: decryptSafe(currentEnc.password ?? "") };
