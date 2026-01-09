@@ -1,0 +1,29 @@
+{
+  "name": "password-vault",
+  "services": [
+    {
+      "name": "web",
+      "type": "app",
+      "env": {
+        "NODE_ENV": "production",
+        "PORT": "3000",
+
+        "ADMIN_USER": "",
+        "ADMIN_PASS": "",
+        "AUTH_SECRET": "",
+        "UPSTASH_REDIS_REST_URL": "",
+        "UPSTASH_REDIS_REST_TOKEN": "",
+        "ENCRYPTION_KEY": "",
+
+        "RATE_LIMIT_REQUESTS": "60",
+        "RATE_LIMIT_WINDOW_SECONDS": "60"
+      },
+      "build": {
+        "command": "npm ci && npm run build"
+      },
+      "start": {
+        "command": "npm run start"
+      }
+    }
+  ]
+}
