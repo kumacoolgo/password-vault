@@ -17,7 +17,9 @@ function genPassword(len = 16) {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*()-_=+";
   const buf = new Uint32Array(len);
   crypto.getRandomValues(buf);
-  return Array.from(buf).map((n) => alphabet[n % alphabet.length]).join("");
+  return Array.from(buf)
+    .map((n) => alphabet[n % alphabet.length])
+    .join("");
 }
 
 async function copyText(text: string) {
@@ -53,10 +55,11 @@ export default function HomePage() {
   const filteredItems = useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return items;
-    return items.filter((it) =>
-      (it.category ?? "").toLowerCase().includes(s) ||
-      (it.url ?? "").toLowerCase().includes(s) ||
-      (it.username ?? "").toLowerCase().includes(s)
+    return items.filter(
+      (it) =>
+        (it.category ?? "").toLowerCase().includes(s) ||
+        (it.url ?? "").toLowerCase().includes(s) ||
+        (it.username ?? "").toLowerCase().includes(s)
     );
   }, [items, q]);
 
@@ -77,8 +80,13 @@ export default function HomePage() {
     }
   }
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
-  useEffect(() => { setDraft(selected ?? {}); }, [selectedId, selected]);
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line
+  }, []);
+  useEffect(() => {
+    setDraft(selected ?? {});
+  }, [selectedId, selected]);
 
   async function createNew() {
     const res = await fetch("/api/items", {
@@ -128,8 +136,22 @@ export default function HomePage() {
       <div className="flex items-center justify-between gap-2">
         <h2 className="font-semibold">编辑</h2>
         <div className="flex gap-2">
-          <button type="button" className="rounded-xl border px-3 py-2 disabled:opacity-50" onClick={remove} disabled={!selected}>删除</button>
-          <button type="button" className="rounded-xl bg-black text-white px-3 py-2 disabled:opacity-50" onClick={save} disabled={!selected || !isDirty}>保存</button>
+          <button
+            type="button"
+            className="rounded-xl border px-3 py-2 disabled:opacity-50"
+            onClick={remove}
+            disabled={!selected}
+          >
+            删除
+          </button>
+          <button
+            type="button"
+            className="rounded-xl bg-black text-white px-3 py-2 disabled:opacity-50"
+            onClick={save}
+            disabled={!selected || !isDirty}
+          >
+            保存
+          </button>
         </div>
       </div>
 
@@ -137,20 +159,106 @@ export default function HomePage() {
         <div className="mt-4 text-sm text-gray-500">选择一条记录开始编辑。</div>
       ) : (
         <div className="mt-4 space-y-3">
-          <input className="w-full rounded-xl border px-3 py-2" placeholder="分类(可空)" value={draft.category ?? ""} onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value }))} />
-          <input className="w-full rounded-xl border px-3 py-2" placeholder="网址" value={draft.url ?? ""} onChange={(e) => setDraft((d) => ({ ...d, url: e.target.value }))} />
-          <input className="w-full rounded-xl border px-3 py-2" placeholder="用户名(可空)" value={draft.username ?? ""} onChange={(e) => setDraft((d) => ({ ...d, username: e.target.value }))} />
+          <input
+            className="w-full rounded-xl border px-3 py-2"
+            placeholder="分类(可空)"
+            value={draft.category ?? ""}
+            onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value }))}
+          />
 
+          {/* URL + Copy */}
           <div className="flex gap-2 items-center">
-            <input className="w-full rounded-xl border px-3 py-2" placeholder="密码" value={draft.password ?? ""} onChange={(e) => setDraft((d) => ({ ...d, password: e.target.value }))} autoComplete="new-password" />
-            <button type="button" className="rounded-xl border bg-white px-3 py-2" onClick={() => setDraft((d) => ({ ...d, password: genPassword(16) }))}>Generate</button>
-            <button type="button" className="rounded-xl border bg-white px-3 py-2" onClick={async () => { if (!draft.password) return; await copyText(draft.password); setToast("已复制密码"); }}>Copy</button>
+            <input
+              className="w-full rounded-xl border px-3 py-2"
+              placeholder="网址"
+              value={draft.url ?? ""}
+              onChange={(e) => setDraft((d) => ({ ...d, url: e.target.value }))}
+            />
+            <button
+              type="button"
+              className="rounded-xl border bg-white px-3 py-2"
+              onClick={async () => {
+                if (!draft.url) return;
+                await copyText(draft.url);
+                setToast("已复制网址");
+              }}
+            >
+              Copy
+            </button>
           </div>
 
-          <input className="w-full rounded-xl border px-3 py-2" placeholder="创建时间(可空, ISO 或留空)" value={draft.createdAt ?? ""} onChange={(e) => setDraft((d) => ({ ...d, createdAt: e.target.value }))} />
-          <input className="w-full rounded-xl border px-3 py-2" placeholder="有效期(可空, 天数)" inputMode="numeric" value={draft.validDays?.toString() ?? ""} onChange={(e) => setDraft((d) => ({ ...d, validDays: e.target.value ? Number(e.target.value) : undefined }))} />
-          <input className="w-full rounded-xl border px-3 py-2" placeholder="到期日(可空, ISO)" value={draft.dueDate ?? ""} onChange={(e) => setDraft((d) => ({ ...d, dueDate: e.target.value }))} />
-          <div className="text-xs text-gray-500">提示：如果不填到期日，但填了创建时间+有效期，会自动计算显示到期日。</div>
+          {/* Username + Copy */}
+          <div className="flex gap-2 items-center">
+            <input
+              className="w-full rounded-xl border px-3 py-2"
+              placeholder="用户名(可空)"
+              value={draft.username ?? ""}
+              onChange={(e) => setDraft((d) => ({ ...d, username: e.target.value }))}
+            />
+            <button
+              type="button"
+              className="rounded-xl border bg-white px-3 py-2"
+              onClick={async () => {
+                if (!draft.username) return;
+                await copyText(draft.username);
+                setToast("已复制用户名");
+              }}
+            >
+              Copy
+            </button>
+          </div>
+
+          {/* Password + Generate + Copy */}
+          <div className="flex gap-2 items-center">
+            <input
+              className="w-full rounded-xl border px-3 py-2"
+              placeholder="密码"
+              value={draft.password ?? ""}
+              onChange={(e) => setDraft((d) => ({ ...d, password: e.target.value }))}
+              autoComplete="new-password"
+            />
+            <button
+              type="button"
+              className="rounded-xl border bg-white px-3 py-2"
+              onClick={() => setDraft((d) => ({ ...d, password: genPassword(16) }))}
+            >
+              Generate
+            </button>
+            <button
+              type="button"
+              className="rounded-xl border bg-white px-3 py-2"
+              onClick={async () => {
+                if (!draft.password) return;
+                await copyText(draft.password);
+                setToast("已复制密码");
+              }}
+            >
+              Copy
+            </button>
+          </div>
+
+          <input
+            className="w-full rounded-xl border px-3 py-2"
+            placeholder="创建时间(可空, ISO 或留空)"
+            value={draft.createdAt ?? ""}
+            onChange={(e) => setDraft((d) => ({ ...d, createdAt: e.target.value }))}
+          />
+          <input
+            className="w-full rounded-xl border px-3 py-2"
+            placeholder="有效期(可空, 天数)"
+            inputMode="numeric"
+            value={draft.validDays?.toString() ?? ""}
+            onChange={(e) => setDraft((d) => ({ ...d, validDays: e.target.value ? Number(e.target.value) : undefined }))}
+          />
+          <input
+            className="w-full rounded-xl border px-3 py-2"
+            placeholder="到期日(可空, ISO)"
+            value={draft.dueDate ?? ""}
+            onChange={(e) => setDraft((d) => ({ ...d, dueDate: e.target.value }))}
+          />
+          <div className="text-xs text-gray-500">
+            提示：如果不填到期日，但填了创建时间+有效期，会自动计算显示到期日。
+          </div>
         </div>
       )}
     </>
@@ -160,21 +268,38 @@ export default function HomePage() {
     <div className="min-h-screen p-4 md:p-8 bg-gray-50">
       <div className="mx-auto max-w-6xl">
         <div className="flex items-center justify-between gap-3">
-          <div><h1 className="text-xl md:text-2xl font-semibold">密码管理</h1></div>
+          <div>
+            <h1 className="text-xl md:text-2xl font-semibold">密码管理</h1>
+          </div>
           <div className="flex gap-2">
-            <button type="button" className="rounded-xl border bg-white px-3 py-2" onClick={createNew}>新建</button>
-            <button type="button" className="rounded-xl border bg-white px-3 py-2" onClick={logout}>退出</button>
+            <button type="button" className="rounded-xl border bg-white px-3 py-2" onClick={createNew}>
+              新建
+            </button>
+            <button type="button" className="rounded-xl border bg-white px-3 py-2" onClick={logout}>
+              退出
+            </button>
           </div>
         </div>
 
         <div className="mt-4">
-          <input className="w-full rounded-2xl border bg-white px-4 py-3" placeholder="搜索：分类 / 网址 / 用户名" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input
+            className="w-full rounded-2xl border bg-white px-4 py-3"
+            placeholder="搜索：分类 / 网址 / 用户名"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
         </div>
 
         <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="md:col-span-2 rounded-2xl border bg-white overflow-hidden">
             <div className="hidden md:grid grid-cols-[1fr_1.4fr_1fr_1fr_1fr_0.8fr_1fr] gap-2 bg-gray-50 px-3 py-2 text-xs font-medium">
-              <div>分类</div><div>网址</div><div>用户名</div><div>密码</div><div>创建时间</div><div>有效期</div><div>到期日</div>
+              <div>分类</div>
+              <div>网址</div>
+              <div>用户名</div>
+              <div>密码</div>
+              <div>创建时间</div>
+              <div>有效期</div>
+              <div>到期日</div>
             </div>
             <div className="divide-y">
               {loading && items.length === 0 && <div className="p-6 text-sm text-gray-500">加载中...</div>}
@@ -182,33 +307,62 @@ export default function HomePage() {
                 const due = computeDueDate(it);
                 const isSel = it.id === selectedId;
                 return (
-                  <div key={it.id} role="button" tabIndex={0}
-                    onClick={() => { setSelectedId(it.id); if (window.innerWidth < 768) setMobileOpen(true); }}
-                    className={["w-full text-left px-3 py-3 hover:bg-gray-50 cursor-pointer", isSel ? "bg-gray-50" : ""].join(" ")}
+                  <div
+                    key={it.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
+                      setSelectedId(it.id);
+                      if (window.innerWidth < 768) setMobileOpen(true);
+                    }}
+                    className={["w-full text-left px-3 py-3 hover:bg-gray-50 cursor-pointer", isSel ? "bg-gray-50" : ""].join(
+                      " "
+                    )}
                   >
                     <div className="hidden md:grid grid-cols-[1fr_1.4fr_1fr_1fr_1fr_0.8fr_1fr] gap-2 text-sm items-center">
                       <div className="truncate">{it.category ?? "-"}</div>
+
                       <div className="truncate">{it.url}</div>
+
                       <div className="truncate flex items-center gap-2">
                         <span className="truncate">{it.username ?? "-"}</span>
                         {it.username ? (
-                          <button type="button" className="rounded-lg border px-2 py-1 text-xs bg-white"
-                            onClick={async (e) => { e.stopPropagation(); await copyText(it.username ?? ""); setToast("已复制用户名"); }}
-                          >复制</button>
+                          <button
+                            type="button"
+                            className="rounded-lg border px-2 py-1 text-xs bg-white"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              await copyText(it.username ?? "");
+                              setToast("已复制用户名");
+                            }}
+                          >
+                            复制
+                          </button>
                         ) : null}
                       </div>
+
                       <div className="truncate flex items-center gap-2">
                         <span>{it.password ? "••••••••" : "-"}</span>
                         {it.password ? (
-                          <button type="button" className="rounded-lg border px-2 py-1 text-xs bg-white"
-                            onClick={async (e) => { e.stopPropagation(); await copyText(it.password ?? ""); setToast("已复制密码"); }}
-                          >复制</button>
+                          <button
+                            type="button"
+                            className="rounded-lg border px-2 py-1 text-xs bg-white"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              await copyText(it.password ?? "");
+                              setToast("已复制密码");
+                            }}
+                          >
+                            复制
+                          </button>
                         ) : null}
                       </div>
+
                       <div className="truncate">{it.createdAt ? new Date(it.createdAt).toLocaleString() : "-"}</div>
                       <div className="truncate">{it.validDays ?? "-"}</div>
                       <div className="truncate">{due ? new Date(due).toLocaleDateString() : "-"}</div>
                     </div>
+
                     <div className="md:hidden space-y-1">
                       <div className="flex items-center justify-between gap-2">
                         <div className="font-medium truncate">{it.url}</div>
@@ -232,7 +386,9 @@ export default function HomePage() {
         <div className="fixed inset-x-0 bottom-0 max-h-[85vh] overflow-auto rounded-t-2xl bg-white p-4">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold">编辑</h2>
-            <button type="button" className="rounded-xl border px-3 py-2" onClick={() => setMobileOpen(false)}>关闭</button>
+            <button type="button" className="rounded-xl border px-3 py-2" onClick={() => setMobileOpen(false)}>
+              关闭
+            </button>
           </div>
           {Editor}
         </div>
@@ -242,7 +398,13 @@ export default function HomePage() {
         <div className="fixed left-4 bottom-4 rounded-xl bg-black text-white px-4 py-3 text-sm">
           <div className="flex items-center gap-3">
             <span>{toast}</span>
-            <button type="button" className="rounded-lg border border-white/30 px-2 py-1 text-xs" onClick={() => setToast(null)}>×</button>
+            <button
+              type="button"
+              className="rounded-lg border border-white/30 px-2 py-1 text-xs"
+              onClick={() => setToast(null)}
+            >
+              ×
+            </button>
           </div>
         </div>
       ) : null}
