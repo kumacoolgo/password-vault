@@ -4,7 +4,7 @@ import type { VaultItem } from "@/lib/types";
 import { nanoid } from "nanoid";
 import { decryptSafe, encrypt, isEncrypted } from "@/lib/crypto";
 import { ratelimit } from "@/lib/ratelimit";
-import { parseMaybeJSON } from "@/lib/kv";
+import { parseMaybeJSON, stringifyStore } from "@/lib/kv";
 
 const INDEX_KEY = "vault:items";
 
@@ -23,11 +23,14 @@ export async function GET(req: Request) {
   if (!ids.length) return NextResponse.json({ items: [], offset, limit });
 
   const keys = ids.map((id) => `vault:item:${id}`);
-  const rows = (await redis.mget(...keys)) ?? [];
+
+  // We store as JSON string, so read as string
+  const rows = (await redis.mget<string>(...keys)) ?? [];
 
   const out: VaultItem[] = [];
   for (const raw of rows.filter(Boolean)) {
-    const it = parseMaybeJSON<VaultItem>(raw) ?? (raw as VaultItem);
+    const it = parseMaybeJSON<VaultItem>(raw);
+    if (!it) continue;
     out.push({ ...it, password: decryptSafe(it.password ?? "") });
   }
 
@@ -58,22 +61,12 @@ export async function POST(req: Request) {
     dueDate: body.dueDate ?? undefined,
   };
 
-  // ✅ 只加密一次
-  const enc = encrypt(item.password ?? "");
-  console.log("[POST] plaintext len=", (item.password ?? "").length);
-  console.log("[POST] enc payload=", enc);
-
-  // ✅ 只定义一次
-  const toStore: VaultItem = { ...item, password: enc };
+  const toStore: VaultItem = { ...item, password: encrypt(item.password ?? "") };
 
   const p = redis.pipeline();
-  p.set(`vault:item:${id}`, toStore);
+  p.set(`vault:item:${id}`, stringifyStore(toStore));
   p.lpush(INDEX_KEY, id);
   await p.exec();
 
-  const saved = await redis.get(`vault:item:${id}`);
-  console.log("[POST] saved raw=", saved);
-
   return NextResponse.json({ item });
 }
-

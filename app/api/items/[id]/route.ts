@@ -3,6 +3,7 @@ import { redis } from "@/lib/redis";
 import type { VaultItem } from "@/lib/types";
 import { decryptSafe, encrypt, isEncrypted } from "@/lib/crypto";
 import { ratelimit } from "@/lib/ratelimit";
+import { parseMaybeJSON, stringifyStore } from "@/lib/kv";
 
 const INDEX_KEY = "vault:items";
 
@@ -14,13 +15,14 @@ export async function PUT(req: Request, ctx: { params: { id: string } }) {
   const id = ctx.params.id;
   const patch = (await req.json()) as Partial<VaultItem> & { clearPassword?: boolean };
 
-  // reject encrypted from client
+  // Defensive: reject encrypted payload from client
   if (typeof patch.password === "string" && isEncrypted(patch.password)) {
     return NextResponse.json({ error: "password must be plaintext" }, { status: 400 });
   }
 
   const key = `vault:item:${id}`;
-  const currentEnc = await redis.get<VaultItem>(key);
+  const currentRaw = await redis.get<string>(key);
+  const currentEnc = parseMaybeJSON<VaultItem>(currentRaw);
   if (!currentEnc) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const current: VaultItem = { ...currentEnc, password: decryptSafe(currentEnc.password ?? "") };
@@ -46,7 +48,7 @@ export async function PUT(req: Request, ctx: { params: { id: string } }) {
   };
 
   const toStore: VaultItem = { ...next, password: encrypt(next.password ?? "") };
-  await redis.set(key, toStore);
+  await redis.set(key, stringifyStore(toStore));
 
   return NextResponse.json({ item: next });
 }
